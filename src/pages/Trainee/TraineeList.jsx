@@ -57,31 +57,6 @@ class Trainee extends React.Component {
   }
 
   handleSubmit = () => {
-    /*
-   const { page, rowsPerPage, removedialog } = this.state;
-   const { data: {
-    getTrainee: {count = 0} = {}
-  },
- } = this.props;
-  if(removedialog){
-    this.setState({ removedialog: false });
-    if(count - page * rowsPerPage !== 1){
-      refetch({ skip: page * rowsPerPage, limit: rowsPerPage });
-    }
-    else if(page !== 0) {
-      refetch({ skip: (page - 1) * rowsPerPage, limit:rowsPerPage });
-    }
-    else {
-      refetch({ skip: page * rowsPerPage, limit: rowsPerPage });
-    }
-  }
-  else {
-    this.setState({
-      open: false, editdialog: false, loading: true }, () => {
-        this.handleChangePage(page);
-    });
-  }
-  */
  this.setState({ open: false, editdialog: false, removedialog: false});
   }
 
@@ -92,13 +67,6 @@ class Trainee extends React.Component {
       order: order === 'asc' ? 'desc' : 'asc',
     });
   }
-
-/*
-  handleChangePage = (event, newpage) => {
-    this.setState({ page: newpage, loading: true });
-    this.reloadTable(newpage);
-  }
-*/
 
   handleRowsPerPage = (event) => {
     this.setState({ page: 0, rowsPerPage: event.target.value }, () => {
@@ -134,7 +102,7 @@ class Trainee extends React.Component {
     const { 
       classes,
       data: {
-        getTrainee: { records = [], count = 0} = {},
+        getTrainee: { records = [], count = 0 } = {},
         refetch,
         loading,
       },
@@ -228,7 +196,7 @@ Trainee.propTypes = {
 export default Compose(
  withStyles(useStyles),
 graphql(GET_TRAINEE, {
-  options: {
+  data: {
     variables: {skip: 0, limit: 10}, 
   },
 }),
