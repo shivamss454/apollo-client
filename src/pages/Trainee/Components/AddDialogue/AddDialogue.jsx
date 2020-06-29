@@ -3,13 +3,10 @@ import PropTypes from 'prop-types';
 import MailIcon from '@material-ui/icons/Mail';
 import PersonIcon from '@material-ui/icons/Person';
 import VisibilityOffIcon from '@material-ui/icons/VisibilityOff';
-import localStorage from 'local-storage';
 import {
   DialogActions, DialogContent, DialogContentText, Grid, Button, Dialog, DialogTitle, withStyles,
 } from '@material-ui/core';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import callAPI from '../../../../libs/utils/api';
-import { MyContext } from '../../../../contexts';
 import HelperTrainee from '../../HelperTrainee';
 import { Schema, useStyles } from '../../../../configs/constants';
 
@@ -27,8 +24,6 @@ class FormDialog extends Component {
       email: '',
       password: '',
       confirmPassword: '',
-      message: '',
-      loading: false,
       touch: {
         name: false,
         email: false,
@@ -36,33 +31,6 @@ class FormDialog extends Component {
         confirmPassword: false,
       },
     };
-  }
-
-  onClickData = async (data, opensnackbar) => {
-    this.setState({ loading: true });
-    const res = await callAPI(
-      'post',
-      '/trainee',
-      {
-        data,
-        headers: {
-          Authorization: localStorage.get('token'),
-        },
-      },
-    );
-    this.setState({ loading: false });
-    console.log('response from CallAPI', res);
-    if (res.status === 'ok') {
-      this.setState({ message: res.message }, () => {
-        const { message } = this.state;
-        opensnackbar(message, 'success');
-      });
-    } else {
-      this.setState({ message: 'this is an Error Message' }, () => {
-        const { message } = this.state;
-        opensnackbar(message, 'error');
-      });
-    }
   }
 
   getError = (key) => {
@@ -104,10 +72,10 @@ class FormDialog extends Component {
   render() {
     const Result = [];
     const {
-      open, onClose, onSubmit, classes,
+      open, onClose, onSubmit, classes, loading
     } = this.props;
     const {
-      name, email, password, loading,
+      name, email, password,
     } = this.state;
     Object.keys(Obj).forEach((keys) => {
       Result.push(<HelperTrainee
@@ -148,15 +116,11 @@ class FormDialog extends Component {
             <Button onClick={onClose} color="primary">
               Cancel
             </Button>
-            <MyContext.Consumer>
-              {
-                ({ opensnackbar }) => (
                   <Button
                     onClick={() => {
                       onSubmit()({
                         name, email, password,
                       });
-                      this.onClickData({ name, email, password }, opensnackbar);
                     }}
 
                     color="primary"
@@ -166,9 +130,7 @@ class FormDialog extends Component {
                     {loading && <span>Submitting</span>}
                     {!loading && <span> Submit </span>}
                   </Button>
-                )
-              }
-            </MyContext.Consumer>
+
           </DialogActions>
         </Dialog>
       </div>
