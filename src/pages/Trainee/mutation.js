@@ -3,12 +3,17 @@ import { gql } from 'apollo-boost';
 const CREATE_TRAINEE = gql`
 mutation createTrainee ($name: String!, $email: String!, $password: String! ) {
     createTrainee(payload: { name: $name, email: $email, password: $password })
+    {
+        name
+        email
+        role
+    }
 }
 `;
 
 const UPDATE_TRAINEE = gql`
 mutation updateTrainee ($name: String!, $email: String!, $id: ID!) {
-    createTrainee(payload: { name: $name, email: $email, password: $password, id: $id })
+    updateTrainee(payload: { name: $name, email: $email, id: $id })
 }
 `;
 

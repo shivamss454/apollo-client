@@ -60,7 +60,7 @@ class EditDialog extends Component {
 
   render() {
     const {
-      open, onClose, classes, data, onSubmit, loading,
+      open, onClose, classes, data, onSubmit, loading:{loading},
     } = this.props;
     const { originalId: id } = data;
     const {
