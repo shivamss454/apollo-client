@@ -8,7 +8,7 @@ mutation createTrainee ($name: String!, $email: String!, $password: String! ) {
 
 const UPDATE_TRAINEE = gql`
 mutation updateTrainee ($name: String!, $email: String!, $id: ID!) {
-    createTrainee(payload: { name: $name, email: $email, password: $password, id: $id })
+    updateTrainee(payload: { name: $name, email: $email, id: $id })
 }
 `;
 

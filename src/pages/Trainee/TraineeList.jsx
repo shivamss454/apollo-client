@@ -1,25 +1,24 @@
-import React from 'react';
-import * as moment from 'moment';
-import Compose from 'lodash.flowright';
-import { Mutation } from '@apollo/react-components';
-import PropTypes from 'prop-types';
-import EditIcon from '@material-ui/icons/Edit';
-import DeleteIcon from '@material-ui/icons/Delete';
-import { withStyles } from '@material-ui/core/styles';
-import Button from '@material-ui/core/Button';
-import {
-  FormDialog, EditDialog, RemoveDialog,
-} from './Components/index';
-import Table from './Components/Table/Table';
-import { MyContext } from '../../contexts/SnackbarProvider/SnackbarProvider';
-import { graphql } from '@apollo/react-hoc';
-import GET_TRAINEE from './query';
-import { CREATE_TRAINEE, UPDATE_TRAINEE, DELETE_TRAINEE } from './mutation';
+import React from "react";
+import * as moment from "moment";
+import Compose from "lodash.flowright";
+import { Mutation } from "@apollo/react-components";
+import PropTypes from "prop-types";
+import EditIcon from "@material-ui/icons/Edit";
+import DeleteIcon from "@material-ui/icons/Delete";
+import { withStyles } from "@material-ui/core/styles";
+import Button from "@material-ui/core/Button";
+import { FormDialog, EditDialog, RemoveDialog } from "./Components/index";
+import Table from "./Components/Table/Table";
+import { MyContext } from "../../contexts/SnackbarProvider/SnackbarProvider";
+import { graphql } from "@apollo/react-hoc";
+import GET_TRAINEE from "./query";
+import { CREATE_TRAINEE, UPDATE_TRAINEE, DELETE_TRAINEE } from "./mutation";
+import { UPDATE_TRAINEE_SUB, DELETE_TRAINEE_SUB } from "./subscription";
 
 const useStyles = (theme) => ({
   paper: {
-    display: 'flex',
-    flexDirection: 'column',
+    display: "flex",
+    flexDirection: "column",
     margin: theme.spacing(3),
   },
   button: {
@@ -27,8 +26,8 @@ const useStyles = (theme) => ({
     marginBottom: theme.spacing(2),
   },
   buttonPosition: {
-    display: 'flex',
-    justifyContent: 'flex-end',
+    display: "flex",
+    justifyContent: "flex-end",
   },
 });
 
@@ -37,9 +36,9 @@ class Trainee extends React.Component {
     super(props);
     this.state = {
       open: false,
-      order: '',
-      orderBy: '',
-      selected: '',
+      order: "",
+      orderBy: "",
+      selected: "",
       editdialog: false,
       removedialog: false,
       newData: {},
@@ -48,76 +47,135 @@ class Trainee extends React.Component {
     };
   }
 
-  handleClickOpen = () => {
-    this.setState({ open: true }, () => {
+  componentDidMount() {
+    const {
+      data: { subscribeToMore },
+    } = this.props;
+    subscribeToMore({
+      document: UPDATE_TRAINEE_SUB,
+      updateQuery: (prev, { subscriptionData }) => {
+        if (!subscriptionData) return prev;
+        const {
+          getTrainee: { records },
+        } = prev;
+        const {
+          data: { traineeUpdated },
+        } = subscriptionData;
+
+        const updatedRecords = [...records].map((record) => {
+          if (record.originalId === traineeUpdated.originalId) {
+            return {
+              ...record,
+              ...traineeUpdated,
+            };
+          }
+          return record;
+        });
+        return {
+          getTrainee: {
+            ...prev.getTrainee,
+            count: prev.getTrainee.count,
+            records: updatedRecords,
+          },
+        };
+      },
+    });
+    subscribeToMore({
+      document: DELETE_TRAINEE_SUB,
+      updateQuery: (prev, { subscriptionData }) => {
+        if (!subscriptionData) return prev;
+        const {
+          getTrainee: { records },
+        } = prev;
+        const {
+          data: { traineeDeleted },
+        } = subscriptionData;
+
+        const updatedRecords = [...records].filter(
+          (record) => record.originalId !== traineeDeleted
+        );
+        return {
+          getTrainee: {
+            ...prev.getTrainee,
+            count: prev.getTrainee.count - 1,
+            records: updatedRecords,
+          },
+        };
+      },
     });
   }
 
+  handleClickOpen = () => {
+    this.setState({ open: true }, () => {});
+  };
+
   handleClickClose = () => {
-    this.setState({ open: false, editdialog: false, removedialog: false }, () => {
-    });
-  }
+    this.setState(
+      { open: false, editdialog: false, removedialog: false },
+      () => {}
+    );
+  };
 
   handleAddDialog = async (data, createTrainee, opensnackbar) => {
     const { name, email, password } = data;
     await createTrainee({ variables: { name, email, password } })
       .then(() => {
-        opensnackbar('Trainee Added Successfully', 'success')
+        opensnackbar("Trainee Added Successfully", "success");
       })
       .catch((error) => {
         console.log(error);
-        opensnackbar('something went wrong', 'error')
-      })
+        opensnackbar("something went wrong", "error");
+      });
     this.setState({ open: false });
-  }
+  };
 
   handleEditDialog = async (data, updateTrainee, opensnackbar) => {
     const { name, email, id } = data;
     await updateTrainee({ variables: { name, email, id } })
       .then(() => {
-        opensnackbar('Trainee updated Successfully', 'success')
+        opensnackbar("Trainee updated Successfully", "success");
       })
       .catch((error) => {
         console.log(error);
-        opensnackbar('something went wrong', 'error')
-      })
+        opensnackbar("something went wrong", "error");
+      });
     this.setState({ editdialog: false });
-  }
+  };
 
   handleRemoveDialog = async (data, deleteTrainee, opensnackbar) => {
     const { page, rowsPerPage } = this.state;
     const {
-      data: {
-        getTrainee: { count = 0 } = {},
-        refetch,
-      },
+      data: { getTrainee: { count = 0, records } = {}, refetch },
     } = this.props;
-    const { id } = data;
+    const { originalId:id } = data;
     await deleteTrainee({ variables: { id } })
       .then(() => {
-        opensnackbar('Trainee Deleted Successfully', 'success')
+        opensnackbar("Trainee Deleted Successfully", "success");
       })
       .catch((error) => {
-        console.log(error);
-        opensnackbar('something went wrong', 'error')
-      })
-    if (count - page * rowsPerPage === 1 && page > 0) {
+        console.log('uuuuuuuuuuuuuuuuu',error);
+        opensnackbar("something went wrong", "error");
+      });
+    if (records.length === 1 && page > 0) {
+      this.setState({ page: page - 1 });
       refetch({ skip: (page - 1) * rowsPerPage, limit: rowsPerPage });
+    } else if (records.length === 1 && page === 0 && count > 0) {
+      refetch({ skip: page * rowsPerPage, limit: rowsPerPage });
     }
-  }
+    this.setState({ removedialog: false });
+  };
 
   handleSort = (field) => () => {
     const { order } = this.state;
     this.setState({
       orderBy: field,
-      order: order === 'asc' ? 'desc' : 'asc',
+      order: order === "asc" ? "desc" : "asc",
     });
-  }
+  };
 
   handleRowsPerPage = (event) => {
-    this.setState({ page: 0, rowsPerPage: event.target.value }, () => {
-    });
-  }
+    this.setState({ page: 0, rowsPerPage: event.target.value }, () => {});
+  };
 
   handleSelect = (event, data) => {
     this.setState({ selected: event.target.value }, () => console.log(data));
@@ -125,38 +183,38 @@ class Trainee extends React.Component {
 
   handleEditDialogOpen = (data) => {
     this.setState({ editdialog: true, newData: data });
-  }
+  };
 
   handleRemoveDialogOpen = (data) => {
     this.setState({ removedialog: true, newData: data });
-  }
+  };
 
-  Format = (date) => moment(date).format('dddd, MMMM Do YYYY, h:mm:ss a')
+  Format = (date) => moment(date).format("dddd, MMMM Do YYYY, h:mm:ss a");
 
-  Convert = (email) => email.toUpperCase()
+  Convert = (email) => email.toUpperCase();
 
-
-  handleChangePage = (refetch) => (_,newpage) => {
+  handleChangePage = (refetch) => (_, newpage) => {
     const { rowsPerPage } = this.state;
     this.setState({ page: newpage }, () => {
       refetch({ skip: newpage * rowsPerPage, limit: rowsPerPage });
     });
-
-  }
+  };
 
   render() {
     const {
       classes,
-      data: {
-        getTrainee: { records = [], count = 0 } = {},
-        refetch,
-        loading,
-      },
+      data: { getTrainee: { records = [], count = 0 } = {}, refetch, loading },
     } = this.props;
 
     const {
-      open, order, orderBy, page, rowsPerPage, editdialog,
-      removedialog, newData,
+      open,
+      order,
+      orderBy,
+      page,
+      rowsPerPage,
+      editdialog,
+      removedialog,
+      newData,
     } = this.state;
     const variables = { skip: page * rowsPerPage, limit: rowsPerPage };
 
@@ -165,12 +223,12 @@ class Trainee extends React.Component {
         mutation={DELETE_TRAINEE}
         refetchQueries={[{ query: GET_TRAINEE, variables }]}
       >
-        {(deleteTrainee,deleteLoader={loading}) => (
+        {(deleteTrainee, deleteLoader={loading}) => (
           <Mutation
             mutation={CREATE_TRAINEE}
             refetchQueries={[{ query: GET_TRAINEE, variables }]}
           >
-            {(createTrainee,createLoader={loading}) => (
+            {(createTrainee, createLoader={loading}) => (
               <Mutation
                 mutation={UPDATE_TRAINEE}
                 refetchQueries={[{ query: GET_TRAINEE, variables }]}
@@ -181,64 +239,86 @@ class Trainee extends React.Component {
                       <>
                         <div className={classes.paper}>
                           <div className={classes.buttonPosition}>
-                            <Button type="button" color="primary" className={classes.button} variant="outlined" onClick={this.handleClickOpen}>
+                            <Button
+                              type="button"
+                              color="primary"
+                              className={classes.button}
+                              variant="outlined"
+                              onClick={this.handleClickOpen}
+                            >
                               Add TraineeList
-                          </Button>
+                            </Button>
                           </div>
                           <FormDialog
                             data={newData}
                             open={open}
                             onClose={this.handleClickClose}
                             loading={createLoader}
-                            onSubmit={(data) => this.handleAddDialog(data,createTrainee,opensnackbar)}
+                            onSubmit={(data) =>
+                              this.handleAddDialog(
+                                data,
+                                createTrainee,
+                                opensnackbar
+                              )
+                            }
                           />
                           <EditDialog
                             open={editdialog}
                             onClose={this.handleClickClose}
-                            onSubmit={(data) => this.handleEditDialog(data,updateTrainee,opensnackbar)}
+                            onSubmit={(data) =>
+                              this.handleEditDialog(
+                                data,
+                                updateTrainee,
+                                opensnackbar
+                              )
+                            }
                             loading={updateLoader}
                             data={newData}
                           />
                           <RemoveDialog
                             open={removedialog}
                             onClose={this.handleClickClose}
-                            onSubmit={(data) => this.handleRemoveDialog(data,deleteTrainee,opensnackbar)}
+                            onSubmit={(data) =>
+                              this.handleRemoveDialog(
+                                data,
+                                deleteTrainee,
+                                opensnackbar
+                              )
+                            }
                             loading={deleteLoader}
                             data={newData}
                           />
                           <Table
                             id="table"
                             data={records}
-                            columns={
-                              [
-                                {
-                                  field: 'name',
-                                  label: 'Name',
-                                },
-                                {
-                                  field: 'email',
-                                  label: 'Email Address',
-                                  align: 'left',
-                                  format: (value) => value && value.toUpperCase(),
-                                },
-                                {
-                                  field: 'createdAt',
-                                  label: 'Date',
-                                  align: 'right',
-                                  format: this.Format,
-                                },
-                              ]
-                            }
+                            columns={[
+                              {
+                                field: "name",
+                                label: "Name",
+                              },
+                              {
+                                field: "email",
+                                label: "Email Address",
+                                align: "left",
+                                format: (value) => value && value.toUpperCase(),
+                              },
+                              {
+                                field: "createdAt",
+                                label: "Date",
+                                align: "right",
+                                format: this.Format,
+                              },
+                            ]}
                             actions={[
                               {
                                 icon: <EditIcon />,
                                 handler: this.handleEditDialogOpen,
-                                label: 'edit icon',
+                                label: "edit icon",
                               },
                               {
                                 icon: <DeleteIcon />,
                                 handler: this.handleRemoveDialogOpen,
-                                label: 'delete icon',
+                                label: "delete icon",
                               },
                             ]}
                             orderBy={orderBy}
@@ -254,18 +334,16 @@ class Trainee extends React.Component {
                           />
                         </div>
                       </>
-                    )
-                    }
+                    )}
                   </MyContext.Consumer>
-                )})
+                )}
               </Mutation>
-            )})
+            )}
           </Mutation>
-        )})
+        )}
       </Mutation>
     );
   }
-
 }
 
 Trainee.propTypes = {
@@ -279,5 +357,5 @@ export default Compose(
     data: {
       variables: { skip: 0, limit: 10 },
     },
-  }),
+  })
 )(Trainee);

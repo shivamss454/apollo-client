@@ -21,7 +21,7 @@ class RemoveDialog extends React.Component {
 
   render() {
     const {
-      open, onClose, classes, data, onSubmit, loading
+      open, onClose, classes, data, onSubmit, loading:{loading}
     } = this.props;
     const { originalId } = data;
     return (
@@ -39,9 +39,10 @@ class RemoveDialog extends React.Component {
             </Button>
                   <Button
                     onClick={() => {
-                      onSubmit(originalId);
+                      onSubmit({originalId});
                     }}
                     color="primary"
+                    disabled={loading}
                   >
                     {loading && (<CircularProgress size={30} />)}
                     {loading && <>Deleting</>}
