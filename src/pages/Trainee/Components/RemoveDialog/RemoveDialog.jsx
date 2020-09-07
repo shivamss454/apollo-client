@@ -1,13 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import * as moment from 'moment';
 import {
   DialogActions, DialogContent, DialogContentText, Button,
   Dialog, CircularProgress, DialogTitle, withStyles,
 } from '@material-ui/core';
-import localStorage from 'local-storage';
-import { MyContext } from '../../../../contexts';
-import callAPI from '../../../../libs/utils/api';
 
 const useStyles = () => ({
   root: {
@@ -23,43 +19,10 @@ class RemoveDialog extends React.Component {
     };
   }
 
-  onClickData = async (id, opensnackbar) => {
-    const { onSubmit } = this.props;
-    const date = '2019-02-14T18:15:11.778Z';
-    const isAfter = (moment(id.createdAt).isAfter(date));
-    this.setState({ loading: true });
-    await callAPI(
-      'delete',
-      `/trainee/${id}`,
-      {
-        headers: {
-          Authorization: localStorage.get('token'),
-        },
-      },
-    ).then((res) => {
-      this.setState({ loading: false });
-      if (res.status === 'ok' && isAfter) {
-        this.setState({ message: 'Trainee deleted Successfully ' }, () => {
-          onSubmit(res.data);
-          const { message } = this.state;
-          opensnackbar(message, 'success');
-        });
-      } else {
-        this.setState({ message: 'Trainee not deleted Successfully' }, () => {
-          const { message } = this.state;
-          opensnackbar(message, 'error');
-        });
-      }
-    }).catch((err) => {
-      console.log(err);
-    });
-  }
-
   render() {
     const {
-      open, onClose, classes, data,
+      open, onClose, classes, data, onSubmit, loading:{loading}
     } = this.props;
-    const { loading } = this.state;
     const { originalId } = data;
     return (
       <div>
@@ -74,12 +37,9 @@ class RemoveDialog extends React.Component {
             <Button onClick={onClose} color="primary">
               Cancel
             </Button>
-            <MyContext.Consumer>
-              {
-                ({ opensnackbar }) => (
                   <Button
                     onClick={() => {
-                      this.onClickData(originalId, opensnackbar);
+                      onSubmit({originalId});
                     }}
                     color="primary"
                   >
@@ -87,11 +47,7 @@ class RemoveDialog extends React.Component {
                     {loading && <>Deleting</>}
                     {!loading && <span> Delete</span>}
                   </Button>
-                )
-              }
-            </MyContext.Consumer>
-
-          </DialogActions>
+           </DialogActions>
         </Dialog>
       </div>
     );
