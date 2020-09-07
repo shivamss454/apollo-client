@@ -1,16 +1,17 @@
 import React from 'react';
 import * as moment from 'moment';
+import Compose from 'lodash.flowright';
 import PropTypes from 'prop-types';
 import EditIcon from '@material-ui/icons/Edit';
 import DeleteIcon from '@material-ui/icons/Delete';
 import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
-import localStorage from 'local-storage';
 import {
   FormDialog, EditDialog, RemoveDialog,
 } from './Components/index';
-import EnhancedTable from './Components/Table/Table';
-import callAPI from '../../libs/utils/api';
+import Table from './Components/Table/Table';
+import { graphql } from '@apollo/react-hoc';
+import GET_TRAINEE from './query';
 
 const useStyles = (theme) => ({
   paper: {
@@ -36,13 +37,10 @@ class Trainee extends React.Component {
       order: '',
       orderBy: '',
       selected: '',
-      message: '',
-      count: 0,
       loading: true,
       editdialog: false,
       removedialog: false,
       newData: {},
-      rowdata: [],
       page: 0,
       rowsPerPage: 20,
     };
@@ -55,33 +53,11 @@ class Trainee extends React.Component {
 
   handleClickClose = () => {
     this.setState({ open: false, editdialog: false, removedialog: false }, () => {
-      this.componentDidMount();
     });
   }
 
-  handleSubmit = (data) => {
-    const {
-      page, rowsPerPage, count, removedialog,
-    } = this.state;
-    if (removedialog) {
-      this.setState({ removedialog: false });
-      // console.log('inside handle submit page=', page);
-      // console.log('inside handle submit count=', count);
-      if (count !== page * rowsPerPage) {
-        // console.log('inside first if');
-        this.reloadTable(page);
-        if (page !== 0 && count - page * rowsPerPage === 1) {
-          this.setState({ page: page - 1 });
-          this.reloadTable(page);
-        }
-      }
-    }
-    this.setState({
-      open: false, editdialog: false, loading: true,
-    }, () => {
-      console.log(data);
-      this.reloadTable(page);
-    });
+  handleSubmit = () => {
+ this.setState({ open: false, editdialog: false, removedialog: false});
   }
 
   handleSort = (field) => () => {
@@ -90,12 +66,6 @@ class Trainee extends React.Component {
       orderBy: field,
       order: order === 'asc' ? 'desc' : 'asc',
     });
-  }
-
-  handleChangePage = (event, newpage) => {
-    // console.log('inside handle changepage newPage =', newpage);
-    this.setState({ page: newpage, loading: true });
-    this.reloadTable(newpage);
   }
 
   handleRowsPerPage = (event) => {
@@ -115,47 +85,34 @@ class Trainee extends React.Component {
     this.setState({ removedialog: true, newData: data });
   }
 
-  Format = (date) => moment(date).format('dddd, MMMM do YYYY, h:mm:ss a')
+  Format = (date) => moment(date).format('dddd, MMMM Do YYYY, h:mm:ss a')
 
   Convert = (email) => email.toUpperCase()
 
-  reloadTable = (newpage) => {
+
+  handleChangePage = (refetch) => (_,newpage) => {
     const { rowsPerPage } = this.state;
-    const value = this.context;
-
-    callAPI(
-      'get',
-      '/trainee',
-      {
-        params: { skip: newpage * rowsPerPage, limit: rowsPerPage },
-        headers: {
-          Authorization: localStorage.get('token'),
-        },
-      },
-    ).then((res) => {
-      if (res.data === 'undefined') {
-        this.setState({ loading: false, message: 'this is an error message' }, () => {
-          const { message } = this.state;
-          value.opensnackbar(message, 'error');
-        });
-      } else {
-        this.setState({ rowdata: res.data.records, count: res.data.count, loading: false });
-      }
-    }).catch((error) => {
-      console.log(error.message);
+    this.setState({page: newpage }, () => {
+      refetch({skip: newpage * rowsPerPage, limit: rowsPerPage });
     });
-  }
 
-  componentDidMount = () => {
-    this.reloadTable(0);
   }
 
   render() {
-    const { classes } = this.props;
+    const { 
+      classes,
+      data: {
+        getTrainee: { records = [], count = 0 } = {},
+        refetch,
+        loading,
+      },
+    } = this.props;
+    
     const {
       open, order, orderBy, page, rowsPerPage, editdialog,
-      removedialog, newData, count, rowdata, loading,
+      removedialog, newData,
     } = this.state;
+
     return (
       <div className={classes.paper}>
         <div className={classes.buttonPosition}>
@@ -172,18 +129,18 @@ class Trainee extends React.Component {
         <EditDialog
           open={editdialog}
           onClose={this.handleClickClose}
-          onSubmit={this.handleSubmit}
+          onSubmit={() => this.handleSubmit}
           data={newData}
         />
         <RemoveDialog
           open={removedialog}
           onClose={this.handleClickClose}
-          onSubmit={this.handleSubmit}
+          onSubmit={() => this.handleSubmit}
           data={newData}
         />
-        <EnhancedTable
+        <Table
           id="table"
-          data={rowdata}
+          data={records}
           columns={
             [
               {
@@ -223,7 +180,7 @@ class Trainee extends React.Component {
           count={count}
           page={page}
           rowsPerPage={rowsPerPage}
-          onChangePage={this.handleChangePage}
+          onChangePage={this.handleChangePage(refetch)}
           onChangeRowsPerPage={this.handleRowsPerPage}
           loading={loading}
         />
@@ -232,6 +189,15 @@ class Trainee extends React.Component {
   }
 }
 Trainee.propTypes = {
-  classes: PropTypes.func.isRequired,
+  classes: PropTypes.objectOf(PropTypes.string).isRequired,
+  data: PropTypes.objectOf(PropTypes.any).isRequired,
 };
-export default withStyles(useStyles)(Trainee);
+
+export default Compose(
+ withStyles(useStyles),
+graphql(GET_TRAINEE, {
+  data: {
+    variables: {skip: 0, limit: 10}, 
+  },
+}),
+)(Trainee);
