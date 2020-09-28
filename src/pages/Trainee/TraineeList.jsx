@@ -153,7 +153,7 @@ class Trainee extends React.Component {
         opensnackbar("Trainee Deleted Successfully", "success");
       })
       .catch((error) => {
-        console.log('uuuuuuuuuuuuuuuuu',error);
+        console.log(error);
         opensnackbar("something went wrong", "error");
       });
     if (records.length === 1 && page > 0) {
@@ -223,17 +223,17 @@ class Trainee extends React.Component {
         mutation={DELETE_TRAINEE}
         refetchQueries={[{ query: GET_TRAINEE, variables }]}
       >
-        {(deleteTrainee, deleteLoader={loading}) => (
+        {(deleteTrainee, deleteLoader = { loading }) => (
           <Mutation
             mutation={CREATE_TRAINEE}
             refetchQueries={[{ query: GET_TRAINEE, variables }]}
           >
-            {(createTrainee, createLoader={loading}) => (
+            {(createTrainee, createLoader = { loading }) => (
               <Mutation
                 mutation={UPDATE_TRAINEE}
                 refetchQueries={[{ query: GET_TRAINEE, variables }]}
               >
-                {(updateTrainee,updateLoader={loading}) => (
+                {(updateTrainee, updateLoader = { loading }) => (
                   <MyContext.Consumer>
                     {({ opensnackbar }) => (
                       <>
