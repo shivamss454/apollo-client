@@ -13,6 +13,7 @@ import { MyContext } from "../../contexts/SnackbarProvider/SnackbarProvider";
 import { graphql } from "@apollo/react-hoc";
 import GET_TRAINEE from "./query";
 import { CREATE_TRAINEE, UPDATE_TRAINEE, DELETE_TRAINEE } from "./mutation";
+import { UPDATE_TRAINEE_SUB, DELETE_TRAINEE_SUB } from "./subscription";
 
 const useStyles = (theme) => ({
   paper: {
@@ -44,6 +45,64 @@ class Trainee extends React.Component {
       page: 0,
       rowsPerPage: 10,
     };
+  }
+
+  componentDidMount() {
+    const {
+      data: { subscribeToMore },
+    } = this.props;
+    subscribeToMore({
+      document: UPDATE_TRAINEE_SUB,
+      updateQuery: (prev, { subscriptionData }) => {
+        if (!subscriptionData) return prev;
+        const {
+          getTrainee: { records },
+        } = prev;
+        const {
+          data: { traineeUpdated },
+        } = subscriptionData;
+
+        const updatedRecords = [...records].map((record) => {
+          if (record.originalId === traineeUpdated.originalId) {
+            return {
+              ...record,
+              ...traineeUpdated,
+            };
+          }
+          return record;
+        });
+        return {
+          getTrainee: {
+            ...prev.getTrainee,
+            count: prev.getTrainee.count,
+            records: updatedRecords,
+          },
+        };
+      },
+    });
+    subscribeToMore({
+      document: DELETE_TRAINEE_SUB,
+      updateQuery: (prev, { subscriptionData }) => {
+        if (!subscriptionData) return prev;
+        const {
+          getTrainee: { records },
+        } = prev;
+        const {
+          data: { traineeDeleted },
+        } = subscriptionData;
+
+        const updatedRecords = [...records].filter(
+          (record) => record.originalId !== traineeDeleted
+        );
+        return {
+          getTrainee: {
+            ...prev.getTrainee,
+            count: prev.getTrainee.count - 1,
+            records: updatedRecords,
+          },
+        };
+      },
+    });
   }
 
   handleClickOpen = () => {
@@ -88,7 +147,7 @@ class Trainee extends React.Component {
     const {
       data: { getTrainee: { count = 0, records } = {}, refetch },
     } = this.props;
-    const { originalId: id } = data;
+    const { originalId:id } = data;
     await deleteTrainee({ variables: { id } })
       .then(() => {
         opensnackbar("Trainee Deleted Successfully", "success");

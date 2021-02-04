@@ -42,6 +42,7 @@ class RemoveDialog extends React.Component {
                       onSubmit({originalId});
                     }}
                     color="primary"
+                    disabled={loading}
                   >
                     {loading && (<CircularProgress size={30} />)}
                     {loading && <>Deleting</>}

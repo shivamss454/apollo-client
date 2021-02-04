@@ -72,7 +72,7 @@ class FormDialog extends Component {
   render() {
     const Result = [];
     const {
-      open, onClose, onSubmit, classes, loading:{loading}
+      open, onClose, onSubmit, classes, loading:{loading},
     } = this.props;
     const {
       name, email, password,
